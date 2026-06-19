@@ -39,3 +39,8 @@ yarn build
 ```
 
 Output: `dist/`. Deploy lên Vercel, Netlify, hoặc Render Static Site.
+
+## Tài liệu FE
+
+- [Tích hợp API (Thu–Chi, …)](docs/FE_TICH_HOP.md)
+- [Quản lý nhân viên — API & UI/UX](docs/FE_QUAN_LY_NHAN_VIEN.md)

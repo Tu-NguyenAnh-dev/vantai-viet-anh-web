@@ -10,6 +10,7 @@ import {
   Col,
   Typography,
 } from 'antd';
+import { VndInputNumber } from '@/components/common/VndInputNumber';
 import { useQuery } from '@tanstack/react-query';
 import { customersApi, type Customer } from '@/api/customers';
 import { vehiclesApi, type Vehicle } from '@/api/vehicles';
@@ -52,12 +53,14 @@ export default function TripForm({
   const [driverSearch, setDriverSearch] = useState('');
   const [coDriverSearch, setCoDriverSearch] = useState('');
   const [commissionContactSearch, setCommissionContactSearch] = useState('');
+  const [managerSearch, setManagerSearch] = useState('');
 
   const debouncedCustomerSearch = useDebouncedValue(customerSearch, 300);
   const debouncedVehicleSearch = useDebouncedValue(vehicleSearch, 300);
   const debouncedDriverSearch = useDebouncedValue(driverSearch, 300);
   const debouncedCoDriverSearch = useDebouncedValue(coDriverSearch, 300);
   const debouncedCommissionContactSearch = useDebouncedValue(commissionContactSearch, 300);
+  const debouncedManagerSearch = useDebouncedValue(managerSearch, 300);
 
   const { data: customersRes, isFetching: customersLoading } = useQuery({
     queryKey: ['trip-form-customers', debouncedCustomerSearch],
@@ -91,6 +94,15 @@ export default function TripForm({
       }),
   });
 
+  const { data: managersRes, isFetching: managersLoading } = useQuery({
+    queryKey: ['trip-form-managers', debouncedManagerSearch],
+    queryFn: () =>
+      employeesApi.listManagersAndDispatchers({
+        search: debouncedManagerSearch,
+        limit: 80,
+      }),
+  });
+
   const customersList = useMemo(() => rows<Customer>(customersRes), [customersRes]);
   const vehiclesList = useMemo(() => rows<Vehicle>(vehiclesRes), [vehiclesRes]);
   const driversList = useMemo(() => rows<Employee>(driversRes), [driversRes]);
@@ -99,6 +111,7 @@ export default function TripForm({
     () => rows<Employee>(commissionContactsRes),
     [commissionContactsRes],
   );
+  const managersList = useMemo(() => rows<Employee>(managersRes), [managersRes]);
 
   const customerOptions = useMemo(() => {
     const base = customersList.map((c) => ({
@@ -166,20 +179,52 @@ export default function TripForm({
     return base;
   }, [coDriversList, mode, sourceTrip]);
 
-  const commissionContactOptions = useMemo(
-    () =>
-      commissionContactsList.map((e) => ({
-        value: e.id,
-        label: e.phone ? `${e.fullName} (${e.phone})` : e.fullName,
-      })),
-    [commissionContactsList],
-  );
+  const commissionContactOptions = useMemo(() => {
+    const base = commissionContactsList.map((e) => ({
+      value: e.id,
+      label: e.phone ? `${e.fullName} (${e.phone})` : e.fullName,
+    }));
+    const ceid = sourceTrip?.contactEmployeeId;
+    if (
+      mode === 'edit' &&
+      ceid &&
+      sourceTrip?.contactEmployee &&
+      !base.some((o) => o.value === ceid)
+    ) {
+      const e = sourceTrip.contactEmployee;
+      const label = e.fullName ?? e.name ?? ceid;
+      return [{ value: ceid, label }, ...base];
+    }
+    return base;
+  }, [commissionContactsList, mode, sourceTrip]);
+
+  const managerOptions = useMemo(() => {
+    const base = managersList.map((e) => ({
+      value: e.id,
+      label: e.phone ? `${e.fullName} (${e.phone})` : e.fullName,
+    }));
+    const mid = sourceTrip?.managerId;
+    if (mode === 'edit' && mid && sourceTrip?.manager && !base.some((o) => o.value === mid)) {
+      const e = sourceTrip.manager;
+      const label = e.fullName ?? e.name ?? mid;
+      return [{ value: mid, label }, ...base];
+    }
+    return base;
+  }, [managersList, mode, sourceTrip]);
 
   const selectedVehicleId = Form.useWatch('vehicleId', form);
   const selectedVehicle = useMemo(() => {
     if (!selectedVehicleId) return undefined;
     return vehiclesList.find((v) => v.id === selectedVehicleId);
   }, [selectedVehicleId, vehiclesList]);
+
+  const driverIdWatch = Form.useWatch('driverId', form);
+  const coDriverIdWatch = Form.useWatch('coDriverId', form);
+
+  const coDriverOptionsFiltered = useMemo(
+    () => coDriverOptions.filter((o) => o.value !== driverIdWatch),
+    [coDriverOptions, driverIdWatch],
+  );
 
   const selectedCustomerId = Form.useWatch('customerId', form);
   const selectedContactEmployeeId = Form.useWatch('contactEmployeeId', form);
@@ -199,22 +244,29 @@ export default function TripForm({
       vehicleId: tripDefaults.vehicleId,
       coDriverId: tripDefaults.coDriverId || undefined,
       driverId: tripDefaults.driverId,
+      managerId: tripDefaults.managerId || undefined,
       tripDate: tripDefaults.tripDate,
       address: tripDefaults.address,
-      cargo: tripDefaults.cargo,
-      cargoWeight: tripDefaults.cargoWeight,
-      cargoQuantity: tripDefaults.cargoQuantity,
       price: tripDefaults.price,
       paidAmount: tripDefaults.paidAmount ?? 0,
-      fuelCost: tripDefaults.fuelCost ?? 0,
       tollCost: tripDefaults.tollCost ?? 0,
-      repairCost: tripDefaults.repairCost ?? 0,
+      ticketCost: tripDefaults.ticketCost ?? 0,
       fineCost: tripDefaults.fineCost ?? 0,
+      otherCosts: tripDefaults.otherCosts ?? 0,
+      otherCostsNote: tripDefaults.otherCostsNote,
       notes: tripDefaults.notes,
       contactEmployeeId: tripDefaults.contactEmployeeId,
       commissionRateApplied: tripDefaults.commissionRateApplied,
+      driverShift: tripDefaults.driverShift ?? 'day',
+      assistantAllowance: tripDefaults.assistantAllowance ?? 0,
     });
   }, [mode, tripDefaults, form]);
+
+  useEffect(() => {
+    if (!coDriverIdWatch) {
+      form.setFieldValue('assistantAllowance', 0);
+    }
+  }, [coDriverIdWatch, form]);
 
   // Fallback tự động theo Customer (chỉ khi tạo mới — tránh ghi đè dữ liệu đã hydrate khi sửa)
   useEffect(() => {
@@ -251,7 +303,15 @@ export default function TripForm({
       form={form}
       layout="vertical"
       onFinish={handleFinish}
-      initialValues={{ paidAmount: 0, fuelCost: 0, tollCost: 0, repairCost: 0, fineCost: 0 }}
+      initialValues={{
+        paidAmount: 0,
+        tollCost: 0,
+        ticketCost: 0,
+        fineCost: 0,
+        otherCosts: 0,
+        driverShift: 'day',
+        assistantAllowance: 0,
+      }}
     >
       <Typography.Title level={5}>Thông tin chung</Typography.Title>
       <Row gutter={16}>
@@ -269,30 +329,15 @@ export default function TripForm({
           </Form.Item>
         </Col>
         <Col xs={24} md={12}>
-          <Form.Item name="tripDate" label="Ngày chuyến" rules={[{ required: true }]}>
+          <Form.Item name="tripDate" label="Ngày chuyển" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Col>
       </Row>
       <Row gutter={16}>
-        <Col xs={24} md={12}>
-          <Form.Item name="address" label="Địa chỉ chuyến">
+        <Col xs={24}>
+          <Form.Item name="address" label="Địa chỉ">
             <Input placeholder="Địa chỉ / tuyến chuyến" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} md={12}>
-          <Form.Item name="cargo" label="Loại hàng">
-            <Input placeholder="VD: Xi măng" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Form.Item name="cargoWeight" label="Trọng lượng (kg)">
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Form.Item name="cargoQuantity" label="Số lượng">
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
           </Form.Item>
         </Col>
       </Row>
@@ -337,16 +382,76 @@ export default function TripForm({
           </Form.Item>
         </Col>
         <Col xs={24} md={12}>
-          <Form.Item name="coDriverId" label="Phụ xe">
+          <Form.Item
+            name="coDriverId"
+            label="Phụ xe"
+            dependencies={['driverId']}
+            rules={[
+              {
+                validator: (_, value) => {
+                  const d = form.getFieldValue('driverId');
+                  if (value && d && value === d) {
+                    return Promise.reject(new Error('Phụ xe không được trùng tài xế'));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
             <Select
               placeholder="Chọn phụ xe (tùy chọn)"
               showSearch
-              options={coDriverOptions}
+              options={coDriverOptionsFiltered}
               filterOption={false}
               onSearch={setCoDriverSearch}
               loading={coDriversLoading}
               allowClear
               notFoundContent={coDriversLoading ? 'Đang tải...' : 'Không có dữ liệu'}
+            />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <Form.Item name="driverShift" label="Ca làm việc">
+            <Select
+              options={[
+                { value: 'day', label: 'Ca ngày (10% net)' },
+                { value: 'night', label: 'Ca đêm (15% net)' },
+              ]}
+            />
+          </Form.Item>
+        </Col>
+        {coDriverIdWatch ? (
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="assistantAllowance"
+              label="Phụ cấp phụ xe"
+              rules={[
+                {
+                  validator: (_, value) => {
+                    const n = Number(value ?? 0);
+                    if (!Number.isFinite(n) || n < 0) {
+                      return Promise.reject(new Error('Phụ cấp phải ≥ 0'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
+            >
+              <VndInputNumber min={0} placeholder="0" />
+            </Form.Item>
+          </Col>
+        ) : null}
+        <Col xs={24} md={12}>
+          <Form.Item name="managerId" label="Quản lý">
+            <Select
+              placeholder="Chọn nhân viên quản lý"
+              showSearch
+              options={managerOptions}
+              filterOption={false}
+              onSearch={setManagerSearch}
+              loading={managersLoading}
+              allowClear
+              notFoundContent={managersLoading ? 'Đang tải...' : 'Không có dữ liệu'}
             />
           </Form.Item>
         </Col>
@@ -359,7 +464,7 @@ export default function TripForm({
         <Col xs={24} md={8}>
           <Form.Item
             name="price"
-            label="Giá / Doanh thu"
+            label="Giá thành"
             rules={[
               {
                 validator: (_, value) => {
@@ -378,7 +483,7 @@ export default function TripForm({
               },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} />
+            <VndInputNumber />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
@@ -398,7 +503,7 @@ export default function TripForm({
               },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} />
+            <VndInputNumber />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
@@ -409,7 +514,7 @@ export default function TripForm({
               const remainingValue = price - paid;
               return (
                 <div>
-                  <div style={{ fontWeight: 500 }}>Còn nợ (tự tính)</div>
+                  <div style={{ fontWeight: 500 }}>Công nợ (ước tính)</div>
                   <div style={{ color: remainingValue > 0 ? 'red' : 'green' }}>
                     {Number.isFinite(remainingValue)
                       ? remainingValue.toLocaleString('vi-VN')
@@ -495,29 +600,57 @@ export default function TripForm({
       <Typography.Title level={5} style={{ marginTop: 24 }}>
         Chi phí
       </Typography.Title>
+      <Typography.Paragraph type="secondary" style={{ marginTop: -8 }}>
+        Xăng/dầu ghi theo ngày tại màn hình xe — không nhập trên chuyến.
+      </Typography.Paragraph>
       <Row gutter={16}>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="fuelCost" label="Dầu">
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} sm={12} md={6}>
           <Form.Item name="tollCost" label="Phí cầu đường">
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
+            <VndInputNumber min={0} placeholder="0" />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="repairCost" label="Sửa xe">
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
+        <Col xs={24} sm={12} md={6}>
+          <Form.Item name="ticketCost" label="Vé vào cổng / gửi xe">
+            <VndInputNumber min={0} placeholder="0" />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="fineCost" label="Phạt / luật">
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
+        <Col xs={24} sm={12} md={6}>
+          <Form.Item name="fineCost" label="Luật / phạt">
+            <VndInputNumber min={0} placeholder="0" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Form.Item
+            name="otherCosts"
+            label="Chi phí khác"
+          >
+            <VndInputNumber min={0} placeholder="0" />
           </Form.Item>
         </Col>
         <Col xs={24}>
-          <Form.Item name="notes" label="Ghi chú">
+          <Form.Item
+            name="otherCostsNote"
+            label="Ghi chú chi phí khác"
+            dependencies={['otherCosts']}
+            rules={[
+              {
+                validator: (_, value) => {
+                  const other = Number(form.getFieldValue('otherCosts') ?? 0);
+                  if (other > 0 && (!value || !String(value).trim())) {
+                    return Promise.reject(
+                      new Error('Bắt buộc ghi chú khi có chi phí khác'),
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input.TextArea rows={2} placeholder="Bắt buộc khi có chi phí khác (VD: sửa xe…)" />
+          </Form.Item>
+        </Col>
+        <Col xs={24}>
+          <Form.Item name="notes" label="Ghi chú chuyến">
             <Input.TextArea rows={3} placeholder="Ghi chú nội bộ" />
           </Form.Item>
         </Col>

@@ -11,6 +11,7 @@ import {
   AccountBookOutlined,
   BarChartOutlined,
   LogoutOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
@@ -26,6 +27,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   DollarOutlined: <DollarOutlined />,
   AccountBookOutlined: <AccountBookOutlined />,
   BarChartOutlined: <BarChartOutlined />,
+  UploadOutlined: <UploadOutlined />,
 };
 
 export function MainLayout() {

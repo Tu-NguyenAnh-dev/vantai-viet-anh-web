@@ -30,8 +30,16 @@ rawAxios.interceptors.response.use(
       localStorage.removeItem(APP_CONFIG.USER_KEY);
       window.location.href = '/login';
     }
-    const message = error.response?.data?.message ?? error.message ?? 'Có lỗi xảy ra';
-    return Promise.reject(new Error(message));
+    const raw = error.response?.data?.message;
+    let text: string;
+    if (Array.isArray(raw)) {
+      text = raw.map((m) => String(m)).join('; ');
+    } else if (raw != null && typeof raw === 'object') {
+      text = JSON.stringify(raw);
+    } else {
+      text = (typeof raw === 'string' ? raw : undefined) ?? error.message ?? 'Có lỗi xảy ra';
+    }
+    return Promise.reject(new Error(text));
   },
 );
 

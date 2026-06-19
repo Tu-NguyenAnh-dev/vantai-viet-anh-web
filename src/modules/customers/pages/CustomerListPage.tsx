@@ -289,7 +289,7 @@ export function CustomerListPage() {
               ]}
               initialValue={0}
             >
-              <InputNumber min={0} max={100} style={{ width: '100%' }} />
+              <InputNumber min={0} max={100} style={{ width: '100%' }} addonAfter="%" />
             </Form.Item>
             <Form.Item
               label="Hoa hồng max (%)"
@@ -308,7 +308,7 @@ export function CustomerListPage() {
               ]}
               initialValue={0}
             >
-              <InputNumber min={0} max={100} style={{ width: '100%' }} />
+              <InputNumber min={0} max={100} style={{ width: '100%' }} addonAfter="%" />
             </Form.Item>
           </Space>
           <Form.Item label="Địa chỉ" name="address">

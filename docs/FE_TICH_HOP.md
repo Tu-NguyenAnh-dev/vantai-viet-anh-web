@@ -51,22 +51,6 @@ Base: `/api/v1` · Header `Authorization: Bearer <token>`
 
 ## Employees (Nhân viên)
 
-Backend: `CreateEmployeeDto` / `UpdateEmployeeDto` (camelCase, `whitelist: true`).
+**Tài liệu đầy đủ (API + UI/UX chi tiết, chi tiết theo tháng & tab):** [FE_QUAN_LY_NHAN_VIEN.md](./FE_QUAN_LY_NHAN_VIEN.md).
 
-### POST `/employees` — body tạo
-
-| Trường | Bắt buộc | Ghi chú |
-|--------|----------|---------|
-| `fullName` | Có (hoặc `name`) | BE gộp `fullName ?? name` |
-| `baseSalary` | Có | `number`, ≥ 0 (VND) |
-| `employeeCode` | Không | |
-| `phone` | Không | |
-| `email` | Không | `@IsEmail` — **không gửi chuỗi rỗng** (FE dùng `normalizeEmployeeWritePayload`) |
-| `position` | Không | vd. `lái xe`, `phụ xe` |
-| `licenseNumber` | Không | |
-| `licenseType` | Không | |
-| `status` | Không | mặc định `active` |
-
-### PATCH `/employees/:id`
-
-Cùng các trường trên (partial). FE gửi object đã chuẩn hóa qua `normalizeEmployeeWritePayload` trong `src/api/employees.ts`.
+Tóm tắt kỹ thuật: Backend `CreateEmployeeDto` / `UpdateEmployeeDto` (camelCase, `whitelist: true`). FE gửi body đã chuẩn qua `normalizeEmployeeWritePayload` trong `src/api/employees.ts` (email/SĐT rỗng không gửi). Trường bắt buộc khi tạo: `fullName` (hoặc `name`), `baseSalary` (≥ 0). Các field khác: `employeeCode`, `phone`, `email`, `position`, `licenseNumber`, `licenseType`, `status` (mặc định `active`).

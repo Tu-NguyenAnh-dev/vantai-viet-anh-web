@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
+import { Button, Form, Input, Select, Space, Tag } from 'antd';
+import { VndInputNumber } from '@/components/common/VndInputNumber';
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DataTable } from '@/components/common/DataTable';
@@ -40,6 +41,7 @@ export default function EmployeesPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [position, setPosition] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,9 +51,15 @@ export default function EmployeesPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['employees', { page, pageSize, search, position }],
+    queryKey: ['employees', { page, pageSize, search, position, status }],
     queryFn: async () => {
-      const res = await employeesApi.list({ page, limit: pageSize, search, position });
+      const res = await employeesApi.list({
+        page,
+        limit: pageSize,
+        search,
+        position,
+        status,
+      });
       return res;
     },
     placeholderData: keepPreviousData,
@@ -134,6 +142,20 @@ export default function EmployeesPage() {
           value={position}
           onChange={(v) => {
             setPosition(v);
+            setPage(1);
+          }}
+        />
+        <Select
+          allowClear
+          placeholder="Trạng thái"
+          style={{ width: 150 }}
+          options={[
+            { label: 'Hoạt động', value: 'active' },
+            { label: 'Ngừng', value: 'inactive' },
+          ]}
+          value={status}
+          onChange={(v) => {
+            setStatus(v);
             setPage(1);
           }}
         />
@@ -264,7 +286,7 @@ export default function EmployeesPage() {
               },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={0} placeholder="0" />
+            <VndInputNumber min={0} placeholder="0" />
           </Form.Item>
           <Form.Item label="Vị trí" name="position">
             <Select

@@ -4,7 +4,6 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
   Select,
@@ -16,6 +15,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import type { Dayjs } from 'dayjs';
 import { DataTable } from '@/components/common/DataTable';
 import { FormModal } from '@/components/common/FormModal';
+import { VndInputNumber } from '@/components/common/VndInputNumber';
 import type { Debt, DebtStatus, DebtType } from '../types';
 import {
   createDebt,
@@ -462,7 +462,7 @@ export function DebtListPage() {
             label="Số tiền"
             rules={[{ required: true, message: 'Nhập số tiền' }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <VndInputNumber min={1} />
           </Form.Item>
           <Form.Item
             name="dueDate"
@@ -517,12 +517,11 @@ export function DebtListPage() {
             </p>
             <p>Còn nợ: {payTarget.remaining.toLocaleString('vi-VN')} VND</p>
             <label>Số tiền thu/chi:</label>
-            <InputNumber
+            <VndInputNumber
               min={1}
               max={maxPayAmount}
               value={payAmount}
               onChange={(v) => setPayAmount(typeof v === 'number' ? v : 0)}
-              style={{ width: '100%' }}
             />
           </Space>
         )}

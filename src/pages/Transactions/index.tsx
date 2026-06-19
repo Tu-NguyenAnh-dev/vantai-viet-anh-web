@@ -6,7 +6,6 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   Row,
   Select,
   Space,
@@ -18,6 +17,7 @@ import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { DataTable } from '@/components/common/DataTable';
 import { FormModal } from '@/components/common/FormModal';
+import { VndInputNumber } from '@/components/common/VndInputNumber';
 import {
   transactionsApi,
   type Transaction,
@@ -360,7 +360,7 @@ export default function TransactionsPage() {
               { type: 'number', min: 1, message: 'Số tiền > 0' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} />
+            <VndInputNumber min={1} />
           </Form.Item>
           <Form.Item name="date" label="Ngày" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} />

@@ -174,7 +174,9 @@ export default function TripDetailPage() {
         <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
           <Descriptions.Item label="Mã chuyến">{trip.tripCode ?? '—'}</Descriptions.Item>
           <Descriptions.Item label="Ngày chuyến">{trip.tripDate}</Descriptions.Item>
-          <Descriptions.Item label="Khách hàng">{trip.customer?.name ?? '—'}</Descriptions.Item>
+          <Descriptions.Item label="Khách hàng">
+            {trip.customerName ?? trip.customer?.name ?? '—'}
+          </Descriptions.Item>
           <Descriptions.Item label="Trạng thái">
             <StatusBadge status={trip.status} />
           </Descriptions.Item>
@@ -184,12 +186,38 @@ export default function TripDetailPage() {
           <Descriptions.Item label="Xe">{trip.vehicle?.licensePlate ?? '—'}</Descriptions.Item>
           <Descriptions.Item label="Tài xế">{driverName(trip)}</Descriptions.Item>
           <Descriptions.Item label="Phụ xe">{coDriverName(trip)}</Descriptions.Item>
-          <Descriptions.Item label="Doanh thu">{money(trip.revenue)}</Descriptions.Item>
-          <Descriptions.Item label="Đã thu">{money(trip.paidAmount)}</Descriptions.Item>
-          <Descriptions.Item label="Dầu">{money(trip.fuelCost)}</Descriptions.Item>
+          <Descriptions.Item label="Ca làm việc">
+            {trip.driverShift === 'night' ? 'Ca đêm' : trip.driverShift === 'day' ? 'Ca ngày' : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Phụ cấp phụ xe">
+            {trip.coDriverId != null && trip.coDriverId !== ''
+              ? money(trip.assistantAllowance)
+              : '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Quản lý">
+            {trip.managerName ?? trip.manager?.fullName ?? trip.manager?.name ?? '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Người liên hệ HH">
+            {trip.commissionContactName ?? trip.contactEmployee?.fullName ?? trip.contactEmployee?.name ?? '—'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Giá thành">{money(trip.price ?? trip.revenue)}</Descriptions.Item>
+          <Descriptions.Item label="Đã thanh toán">{money(trip.paidAmount)}</Descriptions.Item>
+          <Descriptions.Item label="Công nợ">
+            {trip.debtRemaining != null && trip.debtRemaining !== ''
+              ? money(trip.debtRemaining)
+              : money(
+                  Number(trip.revenue ?? trip.price ?? 0) - Number(trip.paidAmount ?? 0),
+                )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Xăng (nhật ký xe)">{money(trip.fuelCost)}</Descriptions.Item>
           <Descriptions.Item label="Phí cầu đường">{money(trip.tollCost)}</Descriptions.Item>
           <Descriptions.Item label="Lương tài xế">{money(trip.driverSalary)}</Descriptions.Item>
-          <Descriptions.Item label="Chi phí khác">{money(trip.otherCosts)}</Descriptions.Item>
+          <Descriptions.Item label="Chi phí phát sinh" span={2}>
+            {money(trip.otherCosts)}
+            {trip.otherCostsNote?.trim() ? (
+              <div style={{ color: '#666', marginTop: 4 }}>{trip.otherCostsNote}</div>
+            ) : null}
+          </Descriptions.Item>
           <Descriptions.Item label="Lợi nhuận">{money(trip.profit)}</Descriptions.Item>
           <Descriptions.Item label="Ghi chú" span={2}>
             {trip.notes?.trim() ? trip.notes : '—'}

@@ -2,78 +2,70 @@ import dayjs, { type Dayjs } from 'dayjs';
 import type { Trip } from '../types';
 
 /**
- * Giá trị form tạo chuyến — align CreateTripDto (whitelist, forbidNonWhitelisted).
- * - Bắt buộc: tripDate, customerId
- * - BE: otherCosts = otherCosts + repairCost + fineCost
- * - Không gửi: driverSalary (BE set từ baseSalary NV), companyId, profit
+ * Body POST/PATCH /trips — align CreateTripDto (whitelist).
+ * `fuelCost` không nhập trên chuyến — ghi nhận tại module xe (dầu theo ngày).
  */
 export type TripFormSubmitValues = {
   customerId: string;
   vehicleId?: string;
   driverId?: string;
   coDriverId?: string | null;
+  managerId?: string | null;
   /** Ant Design DatePicker */
   tripDate: Dayjs;
   address?: string;
-  cargo?: string;
-  cargoWeight?: number;
-  cargoQuantity?: number;
   price?: number;
   paidAmount?: number;
-  fuelCost?: number;
   tollCost?: number;
-  repairCost?: number;
+  /** Vé vào cổng / gửi xe */
+  ticketCost?: number;
+  /** Luật / phạt */
   fineCost?: number;
+  otherCosts?: number;
+  otherCostsNote?: string;
   notes?: string;
   contactEmployeeId?: string | null;
   commissionRateApplied?: number | string | null;
+  /** Mặc định `day` — BE */
+  driverShift?: 'day' | 'night';
+  assistantAllowance?: number;
 };
 
-/**
- * Body POST /trips — chỉ các key được DTO chấp nhận (tránh 400 forbidNonWhitelisted).
- */
 export function buildCreateTripBody(values: TripFormSubmitValues): Record<string, unknown> {
   const tripDate = values.tripDate.format('YYYY-MM-DD');
-
-  const notesTrim = values.notes?.trim();
-  const repair = Number(values.repairCost ?? 0);
-  const fine = Number(values.fineCost ?? 0);
 
   const body: Record<string, unknown> = {
     tripDate,
     customerId: values.customerId,
     paidAmount: Number(values.paidAmount ?? 0),
-    fuelCost: Number(values.fuelCost ?? 0),
     tollCost: Number(values.tollCost ?? 0),
-    repairCost: repair,
-    fineCost: fine,
+    ticketCost: Number(values.ticketCost ?? 0),
+    fineCost: Number(values.fineCost ?? 0),
+    otherCosts: Number(values.otherCosts ?? 0),
   };
 
   if (values.vehicleId) body.vehicleId = values.vehicleId;
   if (values.driverId) body.driverId = values.driverId;
   if (values.coDriverId) body.coDriverId = values.coDriverId;
 
-  const cargoTrim = values.cargo?.trim();
-  if (cargoTrim) body.cargoType = cargoTrim;
-  const cw = values.cargoWeight;
-  if (cw != null && String(cw).trim() !== '' && Number.isFinite(Number(cw))) {
-    body.cargoWeight = Number(cw);
+  const ocn = values.otherCostsNote?.trim();
+  if (ocn) body.otherCostsNote = ocn;
+
+  if (values.managerId != null && values.managerId !== '') {
+    body.managerId = values.managerId;
+  } else {
+    body.managerId = null;
   }
-  const cq = values.cargoQuantity;
-  if (cq != null && String(cq).trim() !== '' && Number.isFinite(Number(cq))) {
-    body.cargoQuantity = Math.floor(Number(cq));
+
+  if (values.price != null && String(values.price).trim() !== '') {
+    body.revenue = Number(values.price);
   }
 
   const addressTrim = values.address?.trim();
   if (addressTrim) body.address = addressTrim;
 
-  if (values.price != null && String(values.price).trim() !== '') {
-    body.price = Number(values.price);
-  }
-
-  if (notesTrim) {
-    body.notes = notesTrim;
-  }
+  const notesTrim = values.notes?.trim();
+  if (notesTrim) body.notes = notesTrim;
 
   if (values.contactEmployeeId != null && values.contactEmployeeId !== '') {
     body.contactEmployeeId = values.contactEmployeeId;
@@ -88,13 +80,18 @@ export function buildCreateTripBody(values: TripFormSubmitValues): Record<string
     body.commissionRateApplied = null;
   }
 
+  body.driverShift = values.driverShift === 'night' ? 'night' : 'day';
+
+  const coId = values.coDriverId;
+  if (coId != null && coId !== '') {
+    body.assistantAllowance = Math.max(0, Number(values.assistantAllowance ?? 0));
+  } else {
+    body.assistantAllowance = 0;
+  }
+
   return body;
 }
 
-/**
- * Map trip từ API → giá trị form (sửa chuyến).
- * `otherCosts` BE không tách sửa xe/phạt — đưa hết vào `repairCost`, `fineCost` = 0 khi hydrate.
- */
 function n(v: unknown, fallback = 0): number {
   if (v == null || v === '') return fallback;
   const x = Number(v);
@@ -102,23 +99,22 @@ function n(v: unknown, fallback = 0): number {
 }
 
 export function tripToFormValues(trip: Trip): TripFormSubmitValues {
+  const price = trip.price != null && trip.price !== '' ? n(trip.price) : n(trip.revenue);
   return {
     customerId: trip.customerId,
     vehicleId: trip.vehicleId,
     driverId: trip.driverId,
     coDriverId: trip.coDriverId ?? null,
+    managerId: trip.managerId ?? null,
     tripDate: dayjs(trip.tripDate),
     address: trip.address?.trim() ? trip.address : undefined,
-    cargo: trip.cargoType ?? undefined,
-    cargoWeight: trip.cargoWeight != null ? n(trip.cargoWeight) : undefined,
-    cargoQuantity: trip.cargoQuantity != null ? n(trip.cargoQuantity) : undefined,
-    /** API đôi khi trả decimal dạng string — InputNumber + rule type:number cần number thuần */
-    price: n(trip.revenue),
+    price,
     paidAmount: n(trip.paidAmount),
-    fuelCost: n(trip.fuelCost),
     tollCost: n(trip.tollCost),
-    repairCost: n(trip.otherCosts),
-    fineCost: 0,
+    ticketCost: n(trip.ticketCost),
+    fineCost: n(trip.fineCost),
+    otherCosts: n(trip.otherCosts),
+    otherCostsNote: trip.otherCostsNote?.trim() ? trip.otherCostsNote : undefined,
     notes: trip.notes?.trim() ? trip.notes : undefined,
     contactEmployeeId: trip.contactEmployeeId ?? null,
     commissionRateApplied:
@@ -128,5 +124,7 @@ export function tripToFormValues(trip: Trip): TripFormSubmitValues {
             const x = Number(trip.commissionRateApplied);
             return Number.isFinite(x) ? x : null;
           })(),
+    driverShift: trip.driverShift === 'night' ? 'night' : 'day',
+    assistantAllowance: n(trip.assistantAllowance),
   };
 }

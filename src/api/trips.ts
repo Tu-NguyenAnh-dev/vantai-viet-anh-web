@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 
+/** Khớp GET /trips — enrich từ BE (price, debtRemaining, …) */
 export interface Trip {
   id: string;
   tripCode?: string;
@@ -8,18 +9,24 @@ export interface Trip {
   driver?: { id: string; fullName: string };
   coDriver?: { id: string; fullName: string };
   customer?: { id: string; name: string };
-  cargoType?: string;
-  cargoWeight?: number;
-  cargoQuantity?: number;
+  manager?: { id: string; fullName?: string; name?: string };
+  contactEmployee?: { id: string; fullName?: string; name?: string };
   address?: string;
   revenue?: number | string;
+  price?: number | string;
+  paidAmount?: number | string;
+  debtRemaining?: number | string;
   fuelCost?: number | string;
   tollCost?: number | string;
   driverSalary?: number | string;
   otherCosts?: number | string;
+  otherCostsNote?: string | null;
   profit?: number | string;
   status: string;
   notes?: string;
+  customerName?: string | null;
+  managerName?: string | null;
+  commissionContactName?: string | null;
 }
 
 export interface TripListParams {
@@ -45,7 +52,7 @@ export const tripsApi = {
   update: (id: string, data: Record<string, unknown>) => apiClient.patch<{ data: Trip }>(`/trips/${id}`, data),
   delete: (id: string) => apiClient.delete(`/trips/${id}`),
   getStats: (params?: { startDate?: string; endDate?: string }) =>
-    apiClient.get<{ data: { totalTrips: number; totalRevenue: number; totalProfit: number } }>('/trips/stats', {
+    apiClient.get<{ data: Record<string, unknown> }>('/trips/stats', {
       params,
     }),
 };

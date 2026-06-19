@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Flex, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Flex, Form, Input, InputNumber, message, Popconfirm, Row, Select, Space, Statistic, Tag } from 'antd';
+import { VndInputNumber } from '@/components/common/VndInputNumber';
+import { PlusOutlined } from '@ant-design/icons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DataTable } from '@/components/common/DataTable';
 import type { Vehicle } from '../types';
-import { createVehicle, fetchVehicles, updateVehicle } from '../services';
+import { vehiclePlate, vehicleTypeLabel, vehicleYearLabel } from '../types';
+import { createVehicle, deleteVehicle, fetchVehicleStats, fetchVehicles, updateVehicle } from '../services';
 import { FormModal } from '@/components/common/FormModal';
-import { ImportExcelModal } from '@/components/common/ImportExcelModal';
 import { ROUTES } from '@/config/routes';
-import { formatMoneyVi, normalizeNumeric } from '@/utils/number';
 
 const STATUS_OPTIONS = [
   { label: 'Tất cả', value: '' },
   { label: 'Hoạt động', value: 'active' },
-  { label: 'Bảo trì', value: 'maintenance' },
+  { label: 'Ngừng hoạt động', value: 'inactive' },
 ];
 
 export function VehicleListPage() {
@@ -23,16 +23,31 @@ export function VehicleListPage() {
   const [status, setStatus] = useState<string>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [vehicleType, setVehicleType] = useState<string>();
+  const [sortStatus, setSortStatus] = useState<'ASC' | 'DESC' | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [form] = Form.useForm<Vehicle>();
-  const watchedStatus = Form.useWatch('status', form);
   const queryClient = useQueryClient();
 
+  const { data: stats } = useQuery({
+    queryKey: ['vehicles-stats'],
+    queryFn: fetchVehicleStats,
+    staleTime: 60 * 1000,
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['vehicles', { search, status, page, pageSize }],
-    queryFn: () => fetchVehicles({ search, status, page, limit: pageSize }),
+    queryKey: ['vehicles', { search, status, vehicleType, sortStatus, page, pageSize }],
+    queryFn: () =>
+      fetchVehicles({
+        search,
+        status,
+        vehicleType,
+        sort: sortStatus ? 'status' : undefined,
+        sortOrder: sortStatus,
+        page,
+        limit: pageSize,
+      }),
     placeholderData: keepPreviousData,
   });
 
@@ -40,6 +55,7 @@ export function VehicleListPage() {
     mutationFn: createVehicle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-stats'] });
       setIsModalOpen(false);
       setEditingVehicle(null);
       form.resetFields();
@@ -51,10 +67,21 @@ export function VehicleListPage() {
       updateVehicle(payload.id, payload.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-stats'] });
       setIsModalOpen(false);
       setEditingVehicle(null);
       form.resetFields();
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteVehicle,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-stats'] });
+      message.success('Đã đánh dấu xe ngừng hoạt động');
+    },
+    onError: (e: Error) => message.error(e.message || 'Không xóa được'),
   });
 
   const handleOpenCreate = () => {
@@ -65,18 +92,18 @@ export function VehicleListPage() {
 
   const handleOpenEdit = (record: Vehicle) => {
     setEditingVehicle(record);
+    const y = vehicleYearLabel(record);
     form.setFieldsValue({
       ...record,
-      maintenanceCost:
-        record.maintenanceCost != null && record.maintenanceCost !== ''
-          ? normalizeNumeric(record.maintenanceCost, 0)
-          : undefined,
+      licensePlate: vehiclePlate(record) || record.licensePlate,
+      vehicleType: vehicleTypeLabel(record),
+      year: y,
     });
     setIsModalOpen(true);
   };
 
   const buildVehiclePayload = (values: Vehicle): Partial<Vehicle> => {
-    const base: Partial<Vehicle> = {
+    return {
       licensePlate: values.licensePlate,
       vehicleType: values.vehicleType,
       brand: values.brand,
@@ -85,10 +112,6 @@ export function VehicleListPage() {
       capacity: values.capacity,
       status: values.status,
     };
-    if (values.status === 'maintenance') {
-      base.maintenanceCost = normalizeNumeric(values.maintenanceCost, 0);
-    }
-    return base;
   };
 
   const handleSubmit = async () => {
@@ -108,13 +131,44 @@ export function VehicleListPage() {
     <>
       <h2 style={{ marginBottom: 24 }}>Quản lý xe</h2>
 
+      {stats ? (
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic title="Tổng xe" value={stats.total ?? 0} />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic title="Hoạt động" value={stats.active ?? 0} valueStyle={{ color: '#16a34a' }} />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic title="Bảo trì" value={stats.maintenance ?? 0} valueStyle={{ color: '#ea580c' }} />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic title="Ngừng HĐ" value={stats.inactive ?? 0} />
+            </Card>
+          </Col>
+        </Row>
+      ) : null}
+
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
-        <Space>
+        <Space wrap align="center">
           <Input.Search
             allowClear
-            placeholder="Tìm kiếm theo biển số, loại xe..."
+            placeholder="Biển số, hãng, model..."
             onSearch={setSearch}
             style={{ width: 260 }}
+          />
+          <Input.Search
+            allowClear
+            placeholder="Loại xe"
+            style={{ width: 160 }}
+            onSearch={(v) => setVehicleType(v.trim() || undefined)}
           />
           <Select
             allowClear
@@ -125,12 +179,6 @@ export function VehicleListPage() {
           />
         </Space>
         <Space>
-          <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
-            Import Excel
-          </Button>
-          <Button href="/templates/import-vehicles-template.xlsx" target="_blank">
-            Tải template
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
             Thêm xe
           </Button>
@@ -146,32 +194,49 @@ export function VehicleListPage() {
           style: { cursor: 'pointer' },
         })}
         columns={[
-          { title: 'Biển số', dataIndex: 'licensePlate' },
-          { title: 'Loại xe', dataIndex: 'vehicleType' },
+          {
+            title: 'Biển số',
+            key: 'plate',
+            render: (_: unknown, r: Vehicle) => vehiclePlate(r),
+          },
+          {
+            title: 'Loại xe',
+            key: 'vtype',
+            render: (_: unknown, r: Vehicle) => vehicleTypeLabel(r),
+          },
           { title: 'Hãng', dataIndex: 'brand' },
           { title: 'Model', dataIndex: 'model' },
-          { title: 'Năm', dataIndex: 'year' },
+          {
+            title: 'Năm',
+            key: 'yr',
+            render: (_: unknown, r: Vehicle) => {
+              const y = vehicleYearLabel(r);
+              return y != null ? String(y) : '—';
+            },
+          },
           { title: 'Tải trọng (kg)', dataIndex: 'capacity' },
           {
             title: 'Trạng thái',
             dataIndex: 'status',
-            render: (value: Vehicle['status']) => (
-              <Tag color={value === 'active' ? 'green' : value === 'maintenance' ? 'orange' : 'default'}>
-                {value === 'active'
+            key: 'status',
+            sorter: true,
+            sortOrder:
+              sortStatus === 'ASC' ? 'ascend' : sortStatus === 'DESC' ? 'descend' : undefined,
+            render: (value: Vehicle['status']) => {
+              const label =
+                value === 'active'
                   ? 'Hoạt động'
                   : value === 'maintenance'
                   ? 'Bảo trì'
-                  : 'Ngừng hoạt động'}
-              </Tag>
-            ),
-          },
-          {
-            title: 'CP bảo trì',
-            key: 'maintenanceCost',
-            width: 120,
-            align: 'right',
-            render: (_: unknown, r: Vehicle) =>
-              r.status === 'maintenance' ? formatMoneyVi(r.maintenanceCost, '—') : '—',
+                  : value === 'inactive'
+                  ? 'Ngừng hoạt động'
+                  : String(value);
+              return (
+                <Tag color={value === 'active' ? 'green' : value === 'maintenance' ? 'orange' : 'default'}>
+                  {label}
+                </Tag>
+              );
+            },
           },
           {
             title: 'Hành động',
@@ -184,6 +249,19 @@ export function VehicleListPage() {
                 <Button type="link" onClick={() => handleOpenEdit(record)}>
                   Sửa
                 </Button>
+                {record.status !== 'inactive' ? (
+                  <Popconfirm
+                    title="Ngừng sử dụng xe?"
+                    description="Hệ thống gọi DELETE (soft delete): đặt trạng thái inactive, không xóa bản ghi."
+                    okText="Xác nhận"
+                    cancelText="Hủy"
+                    onConfirm={() => deleteMutation.mutate(record.id)}
+                  >
+                    <Button type="link" danger loading={deleteMutation.isPending}>
+                      Ngừng sử dụng
+                    </Button>
+                  </Popconfirm>
+                ) : null}
               </Space>
             ),
           },
@@ -192,10 +270,19 @@ export function VehicleListPage() {
           current: page,
           pageSize,
           total: data?.total ?? 0,
-          onChange: (p, ps) => {
-            setPage(p);
-            setPageSize(ps);
-          },
+        }}
+        onChange={(pagination, _filters, sorter) => {
+          if (pagination) {
+            setPage(pagination.current ?? 1);
+            if (pagination.pageSize != null) setPageSize(pagination.pageSize);
+          }
+          const s = Array.isArray(sorter) ? sorter[0] : sorter;
+          if (s && (s as { field?: unknown }).field === 'status') {
+            const order = (s as { order?: 'ascend' | 'descend' | null }).order;
+            if (order === 'ascend') setSortStatus('ASC');
+            else if (order === 'descend') setSortStatus('DESC');
+            else setSortStatus(undefined);
+          }
         }}
       />
 
@@ -235,51 +322,19 @@ export function VehicleListPage() {
             <InputNumber min={1900} max={2100} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="Tải trọng (kg)" name="capacity">
-            <InputNumber min={0} style={{ width: '100%' }} />
+            <VndInputNumber min={0} currencySuffix={false} />
           </Form.Item>
           <Form.Item label="Trạng thái" name="status" initialValue="active">
             <Select
               options={[
                 { label: 'Hoạt động', value: 'active' },
-                { label: 'Bảo trì', value: 'maintenance' },
                 { label: 'Ngừng hoạt động', value: 'inactive' },
               ]}
             />
           </Form.Item>
-          {watchedStatus === 'maintenance' ? (
-            <Form.Item
-              label="Chi phí bảo trì (VND)"
-              name="maintenanceCost"
-              extra="Tùy chọn (≥ 0). Khi lưu, hệ thống ghi nhận vào Thu–Chi để công ty theo dõi."
-              rules={[
-                {
-                  validator: (_, value) => {
-                    if (value === null || value === undefined || value === '') {
-                      return Promise.resolve();
-                    }
-                    const n = normalizeNumeric(value, NaN);
-                    if (!Number.isFinite(n) || n < 0) {
-                      return Promise.reject(new Error('Nhập số ≥ 0'));
-                    }
-                    return Promise.resolve();
-                  },
-                },
-              ]}
-            >
-              <InputNumber min={0} style={{ width: '100%' }} placeholder="0" />
-            </Form.Item>
-          ) : null}
         </Form>
       </FormModal>
 
-      <ImportExcelModal
-        open={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        type="vehicles"
-        title="Import xe từ Excel"
-        templateHref="/templates/import-vehicles-template.xlsx"
-        onImported={() => queryClient.invalidateQueries({ queryKey: ['vehicles'] })}
-      />
     </>
   );
 }

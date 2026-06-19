@@ -18,6 +18,7 @@ import TripCreatePage from '@/modules/trips/pages/TripCreatePage';
 import TripEditPage from '@/modules/trips/pages/TripEditPage';
 import { ROUTES } from '@/config/routes';
 
+
 export function AppRoutes() {
   const routes: RouteObject[] = [
     {

@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/client';
-import type { Trip, TripsListResponse } from '../types';
+import type { Trip, TripStatsData, TripsListResponse } from '../types';
 
 /** Query GET /trips — align QueryTripDto */
 export type QueryTripParams = {
@@ -37,5 +37,17 @@ export const tripApi = {
     }),
 
   deleteTrip: (id: string) => apiClient.delete(`/trips/${id}`),
+
+  getStats: (params?: { startDate?: string; endDate?: string }) =>
+    apiClient.get<{ success?: boolean; data: TripStatsData }>('/trips/stats', {
+      params,
+    }),
+
+  /** `data.buffer` base64, `data.fileName` */
+  exportTrips: (params?: QueryTripParams) =>
+    apiClient.get<{
+      success?: boolean;
+      data: { buffer: string; fileName?: string };
+    }>('/trips/export', { params }),
 };
 
