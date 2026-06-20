@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, Form, Input, InputNumber, Select, Space, Tag } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { DataTable } from '@/components/common/DataTable';
@@ -11,6 +11,7 @@ import { createCustomer, fetchCustomers, updateCustomer } from '../services';
 import { ROUTES } from '@/config/routes';
 import { employeesApi } from '@/api/employees';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { downloadTemplate } from '@/utils/exportReport';
 
 type CustomerFormValues = {
   customerCode?: string;
@@ -143,7 +144,7 @@ export function CustomerListPage() {
           <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
             Import Excel
           </Button>
-          <Button href="/templates/import-customers-template.xlsx" target="_blank">
+          <Button icon={<DownloadOutlined />} onClick={() => downloadTemplate('customers')}>
             Tải template
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
@@ -330,7 +331,7 @@ export function CustomerListPage() {
         onClose={() => setIsImportOpen(false)}
         type="customers"
         title="Import khách hàng từ Excel"
-        templateHref="/templates/import-customers-template.xlsx"
+        onDownloadTemplate={() => downloadTemplate('customers')}
         onImported={() => queryClient.invalidateQueries({ queryKey: ['customers'] })}
       />
     </div>

@@ -337,3 +337,86 @@ export function exportEmployeeReport(params: EmployeeReportParams) {
   const filename = `BaoCao_LX_${employeeName.replace(/\s+/g, '_')}_${yearMonth}.xlsx`;
   downloadWorkbook(wb, filename);
 }
+
+// ---------------------------------------------------------------------------
+// Template generators — tạo file Excel mẫu để import
+// ---------------------------------------------------------------------------
+
+type TemplateType = 'vehicles' | 'employees' | 'customers' | 'users' | 'trips';
+
+const TEMPLATE_CONFIG: Record<TemplateType, { filename: string; headers: string[]; example: (string | number)[] }> = {
+  vehicles: {
+    filename: 'template-xe.xlsx',
+    headers: ['Biển số xe*', 'Loại xe', 'Hãng xe', 'Model', 'Năm SX', 'Tải trọng (tấn)', 'Trạng thái'],
+    example: ['51D-12345', 'Tải', 'Hyundai', 'HD120', 2020, 8.5, 'active'],
+  },
+  employees: {
+    filename: 'template-nhan-vien.xlsx',
+    headers: ['Mã NV', 'Họ tên*', 'Số điện thoại', 'Email', 'Lương cơ bản', 'Chức vụ', 'Số GPLX', 'Hạng GPLX', 'Trạng thái'],
+    example: ['NV001', 'Nguyễn Văn A', '0912345678', 'a@email.com', 8000000, 'Lái xe', 'B123456', 'C', 'active'],
+  },
+  customers: {
+    filename: 'template-khach-hang.xlsx',
+    headers: ['Mã KH', 'Tên khách hàng*', 'Số điện thoại', 'Email', 'Địa chỉ', 'Mã số thuế', 'Người liên hệ', 'Hoa hồng (%)', 'Trạng thái'],
+    example: ['KH001', 'Công ty TNHH ABC', '0281234567', 'abc@company.com', '123 Lý Thường Kiệt', '0123456789', 'Nguyễn Thị B', 5, 'active'],
+  },
+  trips: {
+    filename: 'template-chuyen-xe.xlsx',
+    headers: [
+      'Mã chuyến', 'Ngày*', 'Biển số xe*', 'Tài xế (tên/mã)*', 'Khách hàng (tên/mã)*',
+      'Tuyến đường', 'Doanh thu', 'Phí cầu đường', 'Vé cổng', 'Tiền phạt',
+      'CP khác', 'Ghi chú CP khác', 'Ca (day/night)', 'Phụ cấp phụ xe', 'Trạng thái', 'Ghi chú',
+    ],
+    example: [
+      'CH001', '2026-06-20', '51D-12345', 'Nguyễn Văn A', 'Công ty TNHH ABC',
+      'HCM - Đà Nẵng', 5000000, 200000, 50000, 0,
+      0, '', 'day', 0, 'completed', '',
+    ],
+  },
+  users: {
+    filename: 'template-nguoi-dung.xlsx',
+    headers: ['Email*', 'Họ tên*', 'Vai trò*', 'Mật khẩu*', 'Trạng thái'],
+    example: ['user@email.com', 'Nguyễn Văn A', 'ADMIN', 'Matkhau@123', 'active'],
+  },
+};
+
+export function downloadTemplate(type: TemplateType): void {
+  const config = TEMPLATE_CONFIG[type];
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Template
+  const ws = XLSX.utils.aoa_to_sheet([
+    config.headers,
+    config.example,
+  ]);
+
+  // Style header row width
+  ws['!cols'] = config.headers.map(() => ({ wch: 20 }));
+
+  // Sheet 2: Hướng dẫn
+  const guide: (string | number)[][] = [
+    ['HƯỚNG DẪN NHẬP LIỆU'],
+    [],
+    ['- Cột có dấu * là bắt buộc'],
+    ['- Trạng thái: active | inactive'],
+  ];
+
+  if (type === 'employees') {
+    guide.push(['- Hạng GPLX: B1, B2, C, D, E, F']);
+    guide.push(['- Chức vụ: Lái xe, Phụ xe, Quản lý, Kế toán']);
+  }
+  if (type === 'users') {
+    guide.push(['- Vai trò: ADMIN, DISPATCHER, ACCOUNTANT, DRIVER']);
+  }
+  if (type === 'vehicles') {
+    guide.push(['- Loại xe: Tải, Container, Đầu kéo, Xe khách']);
+  }
+
+  const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+  wsGuide['!cols'] = [{ wch: 50 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Template');
+  XLSX.utils.book_append_sheet(wb, wsGuide, 'Hướng dẫn');
+
+  downloadWorkbook(wb, config.filename);
+}

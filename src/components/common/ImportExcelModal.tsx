@@ -11,6 +11,7 @@ type ImportExcelModalProps = {
   type: ImportType;
   title: string;
   templateHref?: string;
+  onDownloadTemplate?: () => void;
   onImported?: () => void;
 };
 
@@ -22,6 +23,7 @@ export function ImportExcelModal({
   type,
   title,
   templateHref,
+  onDownloadTemplate,
   onImported,
 }: ImportExcelModalProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -105,8 +107,8 @@ export function ImportExcelModal({
         <div style={{ color: '#666' }}>
           Chỉ nhận <b>.xlsx</b>, tối đa <b>5MB</b>, tối đa <b>5000</b> dòng (không tính header).
         </div>
-        {templateHref ? (
-          <Button href={templateHref} target="_blank">
+        {(onDownloadTemplate || templateHref) ? (
+          <Button onClick={onDownloadTemplate ?? (() => window.open(templateHref, '_blank'))}>
             Tải template
           </Button>
         ) : null}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Col, Flex, Form, Input, InputNumber, message, Popconfirm, Row, Select, Space, Statistic, Tag } from 'antd';
 import { VndInputNumber } from '@/components/common/VndInputNumber';
-import { PlusOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DataTable } from '@/components/common/DataTable';
 import type { Vehicle } from '../types';
@@ -10,6 +10,8 @@ import { vehiclePlate, vehicleTypeLabel, vehicleYearLabel } from '../types';
 import { createVehicle, deleteVehicle, fetchVehicleStats, fetchVehicles, updateVehicle } from '../services';
 import { FormModal } from '@/components/common/FormModal';
 import { ROUTES } from '@/config/routes';
+import { ImportExcelModal } from '@/components/common/ImportExcelModal';
+import { downloadTemplate } from '@/utils/exportReport';
 
 const STATUS_OPTIONS = [
   { label: 'Tất cả', value: '' },
@@ -26,6 +28,7 @@ export function VehicleListPage() {
   const [vehicleType, setVehicleType] = useState<string>();
   const [sortStatus, setSortStatus] = useState<'ASC' | 'DESC' | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [form] = Form.useForm<Vehicle>();
   const queryClient = useQueryClient();
@@ -179,6 +182,12 @@ export function VehicleListPage() {
           />
         </Space>
         <Space>
+          <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
+            Import Excel
+          </Button>
+          <Button icon={<DownloadOutlined />} onClick={() => downloadTemplate('vehicles')}>
+            Tải template
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
             Thêm xe
           </Button>
@@ -335,6 +344,13 @@ export function VehicleListPage() {
         </Form>
       </FormModal>
 
+      <ImportExcelModal
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        type="vehicles"
+        title="Import xe từ Excel"
+        onImported={() => queryClient.invalidateQueries({ queryKey: ['vehicles'] })}
+      />
     </>
   );
 }

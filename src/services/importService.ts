@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client';
 
-export type ImportType = 'vehicles' | 'employees' | 'customers';
+export type ImportType = 'vehicles' | 'employees' | 'customers' | 'trips' | 'users';
 
 export type ImportErrorItem = {
   row: number;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Form, Input, Select, Space, Tag } from 'antd';
 import { VndInputNumber } from '@/components/common/VndInputNumber';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DataTable } from '@/components/common/DataTable';
 import { FormModal } from '@/components/common/FormModal';
@@ -16,6 +16,7 @@ import {
 } from '@/api/employees';
 import { ROUTES } from '@/config/routes';
 import { normalizeNumeric } from '@/utils/number';
+import { downloadTemplate } from '@/utils/exportReport';
 
 type EmployeeFormValues = {
   employeeCode?: string;
@@ -163,7 +164,7 @@ export default function EmployeesPage() {
           <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
             Import Excel
           </Button>
-          <Button href="/templates/import-employees-template.xlsx" target="_blank">
+          <Button icon={<DownloadOutlined />} onClick={() => downloadTemplate('employees')}>
             Tải template
           </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
@@ -317,7 +318,7 @@ export default function EmployeesPage() {
         onClose={() => setIsImportOpen(false)}
         type="employees"
         title="Import nhân viên từ Excel"
-        templateHref="/templates/import-employees-template.xlsx"
+        onDownloadTemplate={() => downloadTemplate('employees')}
         onImported={() => queryClient.invalidateQueries({ queryKey: ['employees'] })}
       />
     </div>
