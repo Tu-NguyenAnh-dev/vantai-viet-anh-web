@@ -265,6 +265,7 @@ export default function TripListPage() {
       <ImportExcelModal
         open={isImportOpen}
         type="trips"
+        title="Import chuyến xe từ Excel"
         onClose={() => setIsImportOpen(false)}
         onDownloadTemplate={() => downloadTemplate('trips')}
       />
