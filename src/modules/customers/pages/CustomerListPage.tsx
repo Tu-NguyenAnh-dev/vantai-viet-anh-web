@@ -144,9 +144,6 @@ export function CustomerListPage() {
           <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
             Import Excel
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={() => downloadTemplate('customers')}>
-            Tải template
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
             Thêm khách hàng
           </Button>

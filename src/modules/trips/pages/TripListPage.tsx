@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Button, Card, Col, DatePicker, Input, Row, Select, Space, Statistic, message } from 'antd';
-import { DownloadOutlined, PlusOutlined } from '@ant-design/icons';
+import { DownloadOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { ImportExcelModal } from '@/components/common/ImportExcelModal';
+import { downloadTemplate } from '@/utils/exportReport';
 import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import TripTable from '../components/TripTable';
@@ -45,6 +47,7 @@ function downloadExcelBase64(buffer: string, fileName: string) {
 export default function TripListPage() {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -245,6 +248,9 @@ export default function TripListPage() {
         </Row>
       </Card>
       <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'flex-end' }}>
+        <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
+          Import Excel
+        </Button>
         <Button icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>
           Xuất Excel
         </Button>
@@ -256,6 +262,12 @@ export default function TripListPage() {
           Tạo đơn vận chuyển
         </Button>
       </Space>
+      <ImportExcelModal
+        open={isImportOpen}
+        type="trips"
+        onClose={() => setIsImportOpen(false)}
+        onDownloadTemplate={() => downloadTemplate('trips')}
+      />
       <TripTable
         data={trips}
         loading={isLoading}

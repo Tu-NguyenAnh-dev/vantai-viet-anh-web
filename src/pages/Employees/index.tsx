@@ -164,9 +164,6 @@ export default function EmployeesPage() {
           <Button icon={<UploadOutlined />} onClick={() => setIsImportOpen(true)}>
             Import Excel
           </Button>
-          <Button icon={<DownloadOutlined />} onClick={() => downloadTemplate('employees')}>
-            Tải template
-          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
             Thêm nhân viên
           </Button>
