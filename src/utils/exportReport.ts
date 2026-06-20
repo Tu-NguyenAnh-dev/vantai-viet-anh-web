@@ -364,12 +364,14 @@ const TEMPLATE_CONFIG: Record<TemplateType, { filename: string; headers: string[
     filename: 'template-chuyen-xe.xlsx',
     headers: [
       'Mã chuyến', 'Ngày*', 'Biển số xe*', 'Tài xế (tên/mã)*', 'Khách hàng (tên/mã)*',
-      'Tuyến đường', 'Doanh thu', 'Phí cầu đường', 'Vé cổng', 'Tiền phạt',
+      'Tuyến đường', 'Doanh thu', 'Đã thanh toán',
+      'Phí cầu đường', 'Vé cổng', 'Tiền phạt', 'Tiền dầu', 'Sửa chữa',
       'CP khác', 'Ghi chú CP khác', 'Ca (day/night)', 'Phụ cấp phụ xe', 'Trạng thái', 'Ghi chú',
     ],
     example: [
       'CH001', '2026-06-20', '51D-12345', 'Nguyễn Văn A', 'Công ty TNHH ABC',
-      'HCM - Đà Nẵng', 5000000, 200000, 50000, 0,
+      'HCM - Đà Nẵng', 5000000, 5000000,
+      200000, 50000, 0, 0, 0,
       0, '', 'day', 0, 'completed', '',
     ],
   },
